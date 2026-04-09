@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "./events.sol" as Events;
+import "./errors.sol" as Errors;
+
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
@@ -28,48 +31,6 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
     /// @notice The Permit2 contract address (set once at construction, immutable)
     ISignatureTransfer public immutable PERMIT2;
 
-    /// @notice Emitted when settle() completes successfully
-    event Settled();
-
-    /// @notice Emitted when settleWithPermit() completes successfully
-    event SettledWithPermit();
-
-    /// @notice Emitted when EIP-2612 permit() reverts with an Error(string) reason
-    /// @param token The token whose permit() was called
-    /// @param owner The token owner for whom permit was attempted
-    /// @param reason The human-readable revert reason string
-    event EIP2612PermitFailedWithReason(address indexed token, address indexed owner, string reason);
-
-    /// @notice Emitted when EIP-2612 permit() reverts with a Panic(uint256) code
-    /// @param token The token whose permit() was called
-    /// @param owner The token owner for whom permit was attempted
-    /// @param errorCode The Solidity panic code (e.g. 0x11 for overflow, 0x01 for assert)
-    event EIP2612PermitFailedWithPanic(address indexed token, address indexed owner, uint256 errorCode);
-
-    /// @notice Emitted when EIP-2612 permit() reverts with a custom error or empty data
-    /// @param token The token whose permit() was called
-    /// @param owner The token owner for whom permit was attempted
-    /// @param data The raw revert data (custom error selector + params, or empty)
-    event EIP2612PermitFailedWithData(address indexed token, address indexed owner, bytes data);
-
-    /// @notice Thrown when Permit2 address is zero
-    error InvalidPermit2Address();
-
-    /// @notice Thrown when destination address is zero
-    error InvalidDestination();
-
-    /// @notice Thrown when payment is attempted before validAfter timestamp
-    error PaymentTooEarly();
-
-    /// @notice Thrown when owner address is zero
-    error InvalidOwner();
-
-    /// @notice Thrown when settlement amount is zero
-    error InvalidAmount();
-
-    /// @notice Thrown when EIP-2612 permit value doesn't match Permit2 permitted amount
-    error Permit2612AmountMismatch();
-
     /**
      * @notice EIP-2612 permit parameters grouped to reduce stack depth
      * @param value Approval amount for Permit2
@@ -93,9 +54,7 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
      *      initialization race. Using the same canonical Permit2 address on every chain
      *      keeps the initCode identical, preserving CREATE2 address determinism.
      */
-    constructor(
-        address _permit2
-    ) {
+    constructor(address _permit2) {
         if (_permit2 == address(0)) revert InvalidPermit2Address();
         PERMIT2 = ISignatureTransfer(_permit2);
     }
@@ -124,15 +83,30 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
         string memory witnessTypeString,
         bytes calldata signature
     ) internal {
-        if (settlementAmount == 0) revert InvalidAmount();
-        if (owner == address(0)) revert InvalidOwner();
-        if (to == address(0)) revert InvalidDestination();
-        if (block.timestamp < validAfter) revert PaymentTooEarly();
+        if (settlementAmount == 0) revert Errors.InvalidAmount();
+        if (owner == address(0)) revert Errors.InvalidOwner();
+        if (to == address(0)) revert Errors.InvalidDestination();
+        if (block.timestamp < validAfter) revert Errors.PaymentTooEarly();
+        if (settlementAmount == 0) revert Errors.InvalidAmount();
+        if (owner == address(0)) revert Errors.InvalidOwner();
+        if (to == address(0)) revert Errors.InvalidDestination();
+        if (block.timestamp < validAfter) revert Errors.PaymentTooEarly();
 
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails =
-            ISignatureTransfer.SignatureTransferDetails({to: to, requestedAmount: settlementAmount});
+        ISignatureTransfer.SignatureTransferDetails
+            memory transferDetails = ISignatureTransfer
+                .SignatureTransferDetails({
+                    to: to,
+                    requestedAmount: settlementAmount
+                });
 
-        PERMIT2.permitWitnessTransferFrom(permit, transferDetails, owner, witnessHash, witnessTypeString, signature);
+        PERMIT2.permitWitnessTransferFrom(
+            permit,
+            transferDetails,
+            owner,
+            witnessHash,
+            witnessTypeString,
+            signature
+        );
     }
 
     /**
@@ -152,19 +126,27 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
         uint256 permittedAmount
     ) internal {
         if (permit2612.value != permittedAmount) {
-            revert Permit2612AmountMismatch();
+            revert Errors.Permit2612AmountMismatch();
         }
 
-        try IERC20Permit(token).permit(
-            owner, address(PERMIT2), permit2612.value, permit2612.deadline, permit2612.v, permit2612.r, permit2612.s
-        ) {
+        try
+            IERC20Permit(token).permit(
+                owner,
+                address(PERMIT2),
+                permit2612.value,
+                permit2612.deadline,
+                permit2612.v,
+                permit2612.r,
+                permit2612.s
+            )
+        {
             // EIP-2612 permit succeeded
         } catch Error(string memory reason) {
             emit EIP2612PermitFailedWithReason(token, owner, reason);
         } catch Panic(uint256 errorCode) {
-            emit EIP2612PermitFailedWithPanic(token, owner, errorCode);
+            emit Events.EIP2612PermitFailedWithPanic(token, owner, errorCode);
         } catch (bytes memory data) {
-            emit EIP2612PermitFailedWithData(token, owner, data);
+            emit Events.EIP2612PermitFailedWithData(token, owner, data);
         }
     }
 }
