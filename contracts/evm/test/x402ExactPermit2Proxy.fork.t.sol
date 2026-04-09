@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {x402ExactPermit2Proxy} from "../src/x402ExactPermit2Proxy.sol";
-import {x402BasePermit2Proxy} from "../src/x402BasePermit2Proxy.sol";
 import {ISignatureTransfer} from "../src/interfaces/ISignatureTransfer.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 

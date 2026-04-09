@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 import {x402UptoPermit2Proxy} from "../../src/x402UptoPermit2Proxy.sol";
-import {x402BasePermit2Proxy} from "../../src/x402BasePermit2Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MaliciousReentrantUpto is ISignatureTransfer {
@@ -18,15 +17,11 @@ contract MaliciousReentrantUpto is ISignatureTransfer {
 
     mapping(address => mapping(uint256 => uint256)) public nonceBitmapStorage;
 
-    function setTarget(
-        address _target
-    ) external {
+    function setTarget(address _target) external {
         target = x402UptoPermit2Proxy(_target);
     }
 
-    function setAttemptReentry(
-        bool _attempt
-    ) external {
+    function setAttemptReentry(bool _attempt) external {
         attemptReentry = _attempt;
     }
 
@@ -44,7 +39,10 @@ contract MaliciousReentrantUpto is ISignatureTransfer {
         storedSignature = signature;
     }
 
-    function nonceBitmap(address owner, uint256 wordPos) external view override returns (uint256) {
+    function nonceBitmap(
+        address owner,
+        uint256 wordPos
+    ) external view override returns (uint256) {
         return nonceBitmapStorage[owner][wordPos];
     }
 
@@ -71,9 +69,19 @@ contract MaliciousReentrantUpto is ISignatureTransfer {
 
         if (attemptReentry && address(target) != address(0)) {
             // Upto variant includes the amount parameter
-            target.settle(storedPermit, storedAmount, storedOwner, storedWitness, storedSignature);
+            target.settle(
+                storedPermit,
+                storedAmount,
+                storedOwner,
+                storedWitness,
+                storedSignature
+            );
         }
 
-        IERC20(permit.permitted.token).transferFrom(owner, transferDetails.to, transferDetails.requestedAmount);
+        IERC20(permit.permitted.token).transferFrom(
+            owner,
+            transferDetails.to,
+            transferDetails.requestedAmount
+        );
     }
 }

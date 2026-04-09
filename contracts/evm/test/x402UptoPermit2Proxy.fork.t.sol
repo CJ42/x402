@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {x402UptoPermit2Proxy} from "../src/x402UptoPermit2Proxy.sol";
-import {x402BasePermit2Proxy} from "../src/x402BasePermit2Proxy.sol";
 import {ISignatureTransfer} from "../src/interfaces/ISignatureTransfer.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 
@@ -219,9 +218,7 @@ contract X402UptoPermit2ProxyForkTest is Test {
         });
 
         x402UptoPermit2Proxy.Witness memory tamperedWitness = x402UptoPermit2Proxy.Witness({
-            to: attacker,
-            facilitator: signedWitness.facilitator,
-            validAfter: signedWitness.validAfter
+            to: attacker, facilitator: signedWitness.facilitator, validAfter: signedWitness.validAfter
         });
 
         vm.expectRevert();

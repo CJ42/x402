@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {x402UptoPermit2Proxy} from "../../src/x402UptoPermit2Proxy.sol";
-import {x402BasePermit2Proxy} from "../../src/x402BasePermit2Proxy.sol";
 import {ISignatureTransfer} from "../../src/interfaces/ISignatureTransfer.sol";
 import {MockPermit2} from "../mocks/MockPermit2.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -39,16 +38,28 @@ contract X402UptoHandler is Test {
 
         uint256 t = block.timestamp;
 
-        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: address(token), amount: amount}),
-            nonce: nonce,
-            deadline: t + 3600
-        });
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer
+            .PermitTransferFrom({
+                permitted: ISignatureTransfer.TokenPermissions({
+                    token: address(token),
+                    amount: amount
+                }),
+                nonce: nonce,
+                deadline: t + 3600
+            });
 
-        x402UptoPermit2Proxy.Witness memory witness =
-            x402UptoPermit2Proxy.Witness({to: recipient, facilitator: address(this), validAfter: t > 60 ? t - 60 : 0});
+        x402UptoPermit2Proxy.Witness memory witness = x402UptoPermit2Proxy
+            .Witness({
+                to: recipient,
+                facilitator: address(this),
+                validAfter: t > 60 ? t - 60 : 0
+            });
 
-        bytes memory sig = abi.encodePacked(bytes32(uint256(1)), bytes32(uint256(2)), uint8(27));
+        bytes memory sig = abi.encodePacked(
+            bytes32(uint256(1)),
+            bytes32(uint256(2)),
+            uint8(27)
+        );
 
         // Upto variant includes the amount parameter
         try proxy.settle(permit, amount, payer, witness, sig) {
@@ -82,7 +93,13 @@ contract X402UptoInvariantsTest is Test {
         token.approve(address(mockPermit2), type(uint256).max);
         mockPermit2.setShouldActuallyTransfer(true);
 
-        handler = new X402UptoHandler(proxy, mockPermit2, token, payer, recipient);
+        handler = new X402UptoHandler(
+            proxy,
+            mockPermit2,
+            token,
+            payer,
+            recipient
+        );
         targetContract(address(handler));
     }
 
@@ -98,8 +115,10 @@ contract X402UptoInvariantsTest is Test {
 
     /// @notice Token conservation: sum of all balances equals minted amount
     function invariant_tokenConservation() public view {
-        uint256 total = token.balanceOf(payer) + token.balanceOf(recipient) + token.balanceOf(address(proxy))
-            + token.balanceOf(address(mockPermit2));
+        uint256 total = token.balanceOf(payer) +
+            token.balanceOf(recipient) +
+            token.balanceOf(address(proxy)) +
+            token.balanceOf(address(mockPermit2));
         assertEq(total, MINT_AMOUNT);
     }
 }
