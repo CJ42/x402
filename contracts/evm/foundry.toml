@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 test = "test"
 script = "script"
-solc = "0.8.28"
+solc = "0.8.33"
 optimizer = true
 optimizer_runs = 200
 via_ir = false
@@ -53,4 +53,3 @@ multiline_func_header = "params_first"
 quote_style = "double"
 number_underscore = "thousands"
 single_line_statement_blocks = "preserve"
-

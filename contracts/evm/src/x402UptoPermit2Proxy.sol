@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.32;
+
+import "./events.sol" as Events;
+import "./errors.sol" as Errors;
 
 import {x402BasePermit2Proxy} from "./x402BasePermit2Proxy.sol";
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
@@ -24,13 +27,8 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         "Witness witness)TokenPermissions(address token,uint256 amount)Witness(address to,address facilitator,uint256 validAfter)";
 
     /// @notice EIP-712 typehash for witness struct
-    bytes32 public constant WITNESS_TYPEHASH = keccak256("Witness(address to,address facilitator,uint256 validAfter)");
-
-    /// @notice Thrown when msg.sender does not match the facilitator in the witness
-    error UnauthorizedFacilitator();
-
-    /// @notice Thrown when requested amount exceeds permitted amount
-    error AmountExceedsPermitted();
+    bytes32 public constant WITNESS_TYPEHASH =
+        keccak256("Witness(address to,address facilitator,uint256 validAfter)");
 
     /**
      * @notice Witness data structure for payment authorization
@@ -44,9 +42,7 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         uint256 validAfter;
     }
 
-    constructor(
-        address _permit2
-    ) x402BasePermit2Proxy(_permit2) {}
+    constructor(address _permit2) x402BasePermit2Proxy(_permit2) {}
 
     /**
      * @notice Settles a payment using a Permit2 signature
@@ -64,12 +60,29 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         Witness calldata witness,
         bytes calldata signature
     ) external nonReentrant {
-        if (amount > permit.permitted.amount) revert AmountExceedsPermitted();
-        if (msg.sender != witness.facilitator) revert UnauthorizedFacilitator();
-        bytes32 witnessHash =
-            keccak256(abi.encode(WITNESS_TYPEHASH, witness.to, witness.facilitator, witness.validAfter));
-        _settle(permit, amount, owner, witness.to, witness.validAfter, witnessHash, WITNESS_TYPE_STRING, signature);
-        emit Settled();
+        if (amount > permit.permitted.amount)
+            revert Errors.AmountExceedsPermitted();
+        if (msg.sender != witness.facilitator)
+            revert Errors.UnauthorizedFacilitator();
+        bytes32 witnessHash = keccak256(
+            abi.encode(
+                WITNESS_TYPEHASH,
+                witness.to,
+                witness.facilitator,
+                witness.validAfter
+            )
+        );
+        _settle(
+            permit,
+            amount,
+            owner,
+            witness.to,
+            witness.validAfter,
+            witnessHash,
+            WITNESS_TYPE_STRING,
+            signature
+        );
+        emit Events.Settled();
     }
 
     /**
@@ -94,12 +107,34 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         Witness calldata witness,
         bytes calldata signature
     ) external nonReentrant {
-        if (amount > permit.permitted.amount) revert AmountExceedsPermitted();
-        if (msg.sender != witness.facilitator) revert UnauthorizedFacilitator();
-        _executePermit(permit.permitted.token, owner, permit2612, permit.permitted.amount);
-        bytes32 witnessHash =
-            keccak256(abi.encode(WITNESS_TYPEHASH, witness.to, witness.facilitator, witness.validAfter));
-        _settle(permit, amount, owner, witness.to, witness.validAfter, witnessHash, WITNESS_TYPE_STRING, signature);
-        emit SettledWithPermit();
+        if (amount > permit.permitted.amount)
+            revert Errors.AmountExceedsPermitted();
+        if (msg.sender != witness.facilitator)
+            revert Errors.UnauthorizedFacilitator();
+        _executePermit(
+            permit.permitted.token,
+            owner,
+            permit2612,
+            permit.permitted.amount
+        );
+        bytes32 witnessHash = keccak256(
+            abi.encode(
+                WITNESS_TYPEHASH,
+                witness.to,
+                witness.facilitator,
+                witness.validAfter
+            )
+        );
+        _settle(
+            permit,
+            amount,
+            owner,
+            witness.to,
+            witness.validAfter,
+            witnessHash,
+            WITNESS_TYPE_STRING,
+            signature
+        );
+        emit Events.SettledWithPermit();
     }
 }
