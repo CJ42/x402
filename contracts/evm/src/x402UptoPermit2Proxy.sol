@@ -60,10 +60,15 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         Witness calldata witness,
         bytes calldata signature
     ) external nonReentrant {
-        if (amount > permit.permitted.amount)
-            revert Errors.AmountExceedsPermitted();
-        if (msg.sender != witness.facilitator)
-            revert Errors.UnauthorizedFacilitator();
+        require(
+            amount <= permit.permitted.amount,
+            Errors.AmountExceedsPermitted()
+        );
+        require(
+            msg.sender == witness.facilitator,
+            Errors.UnauthorizedFacilitator()
+        );
+
         bytes32 witnessHash = keccak256(
             abi.encode(
                 WITNESS_TYPEHASH,
@@ -82,6 +87,7 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
             WITNESS_TYPE_STRING,
             signature
         );
+
         emit Events.Settled();
     }
 
@@ -107,10 +113,15 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         Witness calldata witness,
         bytes calldata signature
     ) external nonReentrant {
-        if (amount > permit.permitted.amount)
-            revert Errors.AmountExceedsPermitted();
-        if (msg.sender != witness.facilitator)
-            revert Errors.UnauthorizedFacilitator();
+        require(
+            amount <= permit.permitted.amount,
+            Errors.AmountExceedsPermitted()
+        );
+        require(
+            msg.sender == witness.facilitator,
+            Errors.UnauthorizedFacilitator()
+        );
+
         _executePermit(
             permit.permitted.token,
             owner,
@@ -135,6 +146,7 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
             WITNESS_TYPE_STRING,
             signature
         );
+
         emit Events.SettledWithPermit();
     }
 }

@@ -55,7 +55,7 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
      *      keeps the initCode identical, preserving CREATE2 address determinism.
      */
     constructor(address _permit2) {
-        if (_permit2 == address(0)) revert Errors.InvalidPermit2Address();
+        require(_permit2 != address(0), Errors.InvalidPermit2Address());
         PERMIT2 = ISignatureTransfer(_permit2);
     }
 
@@ -83,10 +83,10 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
         string memory witnessTypeString,
         bytes calldata signature
     ) internal {
-        if (settlementAmount == 0) revert Errors.InvalidAmount();
-        if (owner == address(0)) revert Errors.InvalidOwner();
-        if (to == address(0)) revert Errors.InvalidDestination();
-        if (block.timestamp < validAfter) revert Errors.PaymentTooEarly();
+        require(settlementAmount != 0, Errors.InvalidAmount());
+        require(owner != address(0), Errors.InvalidOwner());
+        require(to != address(0), Errors.InvalidDestination());
+        require(block.timestamp >= validAfter, Errors.PaymentTooEarly());
 
         ISignatureTransfer.SignatureTransferDetails
             memory transferDetails = ISignatureTransfer
@@ -121,9 +121,10 @@ abstract contract x402BasePermit2Proxy is ReentrancyGuard {
         EIP2612Permit calldata permit2612,
         uint256 permittedAmount
     ) internal {
-        if (permit2612.value != permittedAmount) {
-            revert Errors.Permit2612AmountMismatch();
-        }
+        require(
+            permit2612.value == permittedAmount,
+            Errors.Permit2612AmountMismatch()
+        );
 
         try
             IERC20Permit(token).permit(
