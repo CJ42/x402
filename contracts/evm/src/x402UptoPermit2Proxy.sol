@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.32;
 
 import "./events.sol" as Events;
 
@@ -65,8 +65,9 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         Witness calldata witness,
         bytes calldata signature
     ) external nonReentrant {
-        if (amount > permit.permitted.amount) revert AmountExceedsPermitted();
-        if (msg.sender != witness.facilitator) revert UnauthorizedFacilitator();
+        require(amount <= permit.permitted.amount, AmountExceedsPermitted());
+        require(msg.sender == witness.facilitator, UnauthorizedFacilitator());
+
         bytes32 witnessHash = keccak256(
             abi.encode(
                 WITNESS_TYPEHASH,
@@ -85,6 +86,7 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
             WITNESS_TYPE_STRING,
             signature
         );
+
         emit Events.Settled();
     }
 
@@ -110,8 +112,9 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
         Witness calldata witness,
         bytes calldata signature
     ) external nonReentrant {
-        if (amount > permit.permitted.amount) revert AmountExceedsPermitted();
-        if (msg.sender != witness.facilitator) revert UnauthorizedFacilitator();
+        require(amount <= permit.permitted.amount, AmountExceedsPermitted());
+        require(msg.sender == witness.facilitator, UnauthorizedFacilitator());
+
         _executePermit(
             permit.permitted.token,
             owner,
@@ -136,6 +139,7 @@ contract x402UptoPermit2Proxy is x402BasePermit2Proxy {
             WITNESS_TYPE_STRING,
             signature
         );
+
         emit Events.SettledWithPermit();
     }
 }
